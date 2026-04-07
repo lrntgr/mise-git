@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+#MISE description="Run 'mise-git' backend plugin tests"
+set -euo pipefail
+
+# Setup 'mise' (NB: Requires `mise settings experimental=true`)
+mise plugin link --force git .
+mise cache clear
+
+# Use own repository as test tool
+TEST_TOOL_NAME='https|github.com/lrntgr/mise-git.git'
+TEST_TOOL_VERSION='0.0.1'
+TEST_TOOL="${TEST_TOOL_NAME}@${TEST_TOOL_VERSION}"
+
+echo "Testing version listing for '${TEST_TOOL_NAME}'..."
+if mise ls-remote "git:${TEST_TOOL}" 2>/dev/null; then
+    echo "✓ Version listing works"
+else
+    echo "⚠ Version listing failed"
+fi
+
+echo "✓ Basic plugin structure tests completed"

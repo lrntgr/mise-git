@@ -23,4 +23,4 @@ run = "hk fix"
 
 [tasks.ci]
 description = "Run all CI checks"
-depends = ["lint"]
+depends = ["lint", "test"]
