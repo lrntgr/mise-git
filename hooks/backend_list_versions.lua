@@ -1,85 +1,159 @@
+-- Internal helper table
+local H = {}
+---
 --- Lists available versions for a tool in this backend
 --- Documentation: https://mise.jdx.dev/backend-plugin-development.html#backendlistversions
 --- @param ctx {tool: string} Context (tool = the tool name requested)
 --- @return {versions: string[]} Table containing list of available versions
 function PLUGIN:BackendListVersions(ctx)
-  local tool = ctx.tool
+  local file = require('file')
+  local semver = require('semver')
 
   -- Validate tool name
-  if not tool or tool == '' then
+  if #(ctx.tool or '') <= 0 then
     error('Tool name cannot be empty')
   end
 
-  -- Example implementations (choose/modify based on your backend):
-
-  -- Example 1: API-based version listing (like npm, pip, cargo)
-  local http = require('http')
-  local json = require('json')
-
-  -- Replace with your backend's API endpoint
-  local api_url = 'https://api.<BACKEND>.org/packages/' .. tool .. '/versions'
-
-  local resp, err = http.get({
-    url = api_url,
-    -- headers = { ["Authorization"] = "Bearer " .. token } -- if needed
-  })
-
-  if err then
-    error('Failed to fetch versions for ' .. tool .. ': ' .. err)
+  -- Ensure that repository is cloned in the work directory
+  local dir = file.join_path(PLUGIN.path_get('clone'), ctx.tool)
+  local url = PLUGIN.url_sanitize(ctx.tool)
+  if file.exists(dir) then
+    H.check(dir, url, ctx.tool)
+  else
+    H.clone(dir, url, ctx.tool)
   end
 
-  if resp.status_code ~= 200 then
-    error('API returned status ' .. resp.status_code .. ' for ' .. tool)
+  -- Fetch tags
+  H.fetch(dir, ctx.tool)
+
+  -- Return tags as versions
+  return { versions = semver.sort(H.list(dir, ctx.tool)) }
+end
+
+-- -------------------------------------------------------------------------- --
+
+-- Wrap a given string with single quotes
+H.quote = function(val)
+  return "'" .. tostring(val) .. "'"
+end
+
+-- Clone a repository
+H.clone = function(dir, url, tool)
+  local cmd = require('cmd')
+  local log = require('log')
+  local strings = require('strings')
+
+  -- Clone repository in a new directory
+  local git_cmd = {
+    'git',
+    'clone',
+    '--tags',
+    url,
+    H.quote(dir),
+  }
+  log.info(string.format('Clone: url=%s, dir=%s', H.quote(url), H.quote(dir)))
+  local ok, out = pcall(cmd.exec, strings.join(git_cmd, ' '))
+  if not ok then
+    error(string.format('Failed to clone %s: %s', tool, tostring(out)))
+  end
+end
+
+-- Check if a repository as the correct 'origin' remote URL
+H.check = function(dir, url, tool)
+  local cmd = require('cmd')
+  local strings = require('strings')
+
+  -- Check that directory is a repository with the correct 'origin' remote
+  local git_cmd = {
+    'git',
+    '-C',
+    H.quote(dir),
+    'config',
+    '--get',
+    'remote.origin.url',
+  }
+  local ok, out = pcall(cmd.exec, strings.join(git_cmd, ' '))
+  if not ok then
+    error(
+      string.format(
+        'Failed to get origin remote of %s: %s',
+        H.quote(tool),
+        tostring(out)
+      )
+    )
+  end
+  out = out:gsub('\n$', '')
+  if out ~= strings.trim_space(url) then
+    error(
+      string.format(
+        'Incorrect origin remote of %s: %s vs %s',
+        H.quote(tool),
+        H.quote(out),
+        H.quote(url)
+      )
+    )
+  end
+end
+
+-- Fetch tags from 'origin' remote
+H.fetch = function(dir, tool)
+  local cmd = require('cmd')
+  local log = require('log')
+  local strings = require('strings')
+
+  -- Fetch remote tags
+  local git_cmd = {
+    'git',
+    '-C',
+    H.quote(dir),
+    'fetch',
+    '--prune-tags',
+    '--tags',
+  }
+  log.info(string.format('Fetching tags of %s...', H.quote(tool)))
+  local ok, out = pcall(cmd.exec, strings.join(git_cmd, ' '))
+  if not ok then
+    error(
+      string.format(
+        'Failed to fetch origin tags of %s: %s',
+        H.quote(tool),
+        tostring(out)
+      )
+    )
+  end
+end
+
+-- List repository tags
+H.list = function(dir, tool)
+  local cmd = require('cmd')
+  local strings = require('strings')
+
+  -- List local tags
+  local git_cmd = {
+    'git',
+    '-C',
+    H.quote(dir),
+    'tag',
+    '--list',
+  }
+  local ok, out = pcall(cmd.exec, strings.join(git_cmd, ' '))
+  if not ok then
+    error(
+      string.format(
+        'Failed to list tags of %s: %s',
+        H.quote(tool),
+        tostring(out)
+      )
+    )
   end
 
-  local data = json.decode(resp.body)
-  local versions = {}
-
-  -- Parse versions from API response (adjust based on your API structure)
-  if data.versions then
-    for _, version in ipairs(data.versions) do
-      table.insert(versions, version)
+  -- Build a list of valid tags
+  local tags = {}
+  for _, tag in ipairs(strings.split(out, '\n')) do
+    if #(strings.trim_space(tag)) > 0 then
+      table.insert(tags, tag)
     end
   end
 
-  -- Example 2: Command-line based version listing
-  --[[
-    local cmd = require("cmd")
-
-    -- Replace with your backend's command to list versions
-    local command = "<BACKEND> search " .. tool .. " --versions"
-    local result = cmd.exec(command)
-
-    if not result or result:match("error") then
-        error("Failed to fetch versions for " .. tool)
-    end
-
-    local versions = {}
-    -- Parse command output to extract versions
-    for version in result:gmatch("[%d%.]+[%w%-]*") do
-        table.insert(versions, version)
-    end
-    --]]
-
-  -- Example 3: Registry file parsing
-  --[[
-    local file = require("file")
-
-    -- Replace with path to your backend's registry or manifest
-    local registry_path = "/path/to/<BACKEND>/registry/" .. tool .. ".json"
-
-    if not file.exists(registry_path) then
-        error("Tool " .. tool .. " not found in registry")
-    end
-
-    local content = file.read(registry_path)
-    local data = json.decode(content)
-    local versions = data.versions or {}
-    --]]
-
-  if #versions == 0 then
-    error('No versions found for ' .. tool)
-  end
-
-  return { versions = versions }
+  return tags
 end
