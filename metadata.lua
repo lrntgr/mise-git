@@ -106,3 +106,21 @@ PLUGIN.dir_remove = function(dir)
     error(string.format('Failed to remove %s', dir))
   end
 end
+
+--- Create/make a new directory
+--- @param dir string Directory path
+PLUGIN.dir_create = function(dir)
+  local cmd = require('cmd')
+  local log = require('log')
+  local strings = require('strings')
+
+  dir = PLUGIN.quote(dir)
+  local is_win = (package.config:sub(1, 1) == '\\')
+  local mkdir_cmd = is_win and { 'mkdir', dir } or { 'mkdir', '-p', dir }
+
+  log.info(string.format('Creating %s', dir))
+  local ok, _ = pcall(cmd.exec, strings.join(mkdir_cmd, ' '))
+  if not ok then
+    error(string.format('Failed to create %s', dir))
+  end
+end
