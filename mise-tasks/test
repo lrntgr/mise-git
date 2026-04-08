@@ -2,13 +2,15 @@
 #MISE description="Run 'mise-git' backend plugin tests"
 set -euo pipefail
 
-# Setup 'mise' (NB: Requires `mise settings experimental=true`)
+# Setup 'mise' (NB: requires 'experimental' setting for custom backend)
+export MISE_EXPERIMENTAL=true
 mise plugin link --force git .
 mise cache clear
 
 # Use own repository as test tool
 TEST_TOOL_NAME='https|github.com/lrntgr/mise-git.git'
-TEST_TOOL_VERSION='0.0.1'
+TEST_TOOL_VERSION='HEAD'
+TEST_TOOL_BIN='mise-git-test.sh'
 TEST_TOOL="${TEST_TOOL_NAME}@${TEST_TOOL_VERSION}"
 
 echo "Testing version listing for '${TEST_TOOL_NAME}'..."
@@ -16,6 +18,21 @@ if mise ls-remote "git:${TEST_TOOL}" 2>/dev/null; then
     echo "✓ Version listing works"
 else
     echo "⚠ Version listing failed"
+    exit 1
 fi
 
-echo "✓ Basic plugin structure tests completed"
+echo "Testing installation of '${TEST_TOOL}'..."
+if mise install --force "git:${TEST_TOOL}" 2>/dev/null; then
+    echo "✓ Tool installation works"
+else
+    echo "⚠ Tool installation failed"
+    exit 2
+fi
+
+echo "Testing execution of '${TEST_TOOL_BIN}' of '${TEST_TOOL}'..."
+if mise exec "git:${TEST_TOOL}" -- "${TEST_TOOL_BIN}" --test 2>/dev/null; then
+    echo "✓ Tool execution works"
+else
+    echo "⚠ Tool execution failed"
+    exit 3
+fi
