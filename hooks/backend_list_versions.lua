@@ -1,6 +1,6 @@
 -- Internal helper table
 local H = {}
----
+
 --- Lists available versions for a tool in this backend
 --- Documentation: https://mise.jdx.dev/backend-plugin-development.html#backendlistversions
 --- @param ctx {tool: string} Context (tool = the tool name requested)
@@ -28,10 +28,10 @@ function PLUGIN:BackendListVersions(ctx)
     H.clone(dir, url, ctx.tool)
   end
 
-  -- Fetch tags
+  -- Fetch refs
   H.fetch(dir, ctx.tool)
 
-  -- Return tags as versions
+  -- Return refs as versions
   return { versions = semver.sort(H.list(dir, ctx.tool)) }
 end
 
@@ -69,7 +69,6 @@ H.clone = function(dir, url, tool)
   local git_cmd = {
     'git',
     'clone',
-    '--tags',
     url,
     H.quote(dir),
   }
@@ -118,27 +117,28 @@ H.check = function(dir, url, tool)
   end
 end
 
--- Fetch tags from 'origin' remote
+-- Fetch refs from 'origin' remote
 H.fetch = function(dir, tool)
   local cmd = require('cmd')
   local log = require('log')
   local strings = require('strings')
 
-  -- Fetch remote tags
+  -- Fetch remote
   local git_cmd = {
     'git',
     '-C',
     H.quote(dir),
     'fetch',
+    '--prune',
     '--prune-tags',
     '--tags',
   }
-  log.info(string.format('Fetching tags of %s...', H.quote(tool)))
+  log.info(string.format('Fetching refs of %s...', H.quote(tool)))
   local ok, out = pcall(cmd.exec, strings.join(git_cmd, ' '))
   if not ok then
     error(
       string.format(
-        'Failed to fetch origin tags of %s: %s',
+        'Failed to fetch origin of %s: %s',
         H.quote(tool),
         tostring(out)
       )
@@ -146,37 +146,49 @@ H.fetch = function(dir, tool)
   end
 end
 
--- List repository tags
+-- List repository refs
 H.list = function(dir, tool)
   local cmd = require('cmd')
   local strings = require('strings')
 
-  -- List local tags
+  -- List refs
   local git_cmd = {
     'git',
     '-C',
     H.quote(dir),
-    'tag',
-    '--list',
+    'show-ref',
   }
   local ok, out = pcall(cmd.exec, strings.join(git_cmd, ' '))
   if not ok then
     error(
       string.format(
-        'Failed to list tags of %s: %s',
+        'Failed to show refs of %s: %s',
         H.quote(tool),
         tostring(out)
       )
     )
   end
 
-  -- Build a list of valid tags
-  local tags = {}
-  for _, tag in ipairs(strings.split(out, '\n')) do
-    if #(strings.trim_space(tag)) > 0 then
-      table.insert(tags, tag)
+  -- Build a list of valid refs
+  local refs = {}
+  for _, ref in ipairs(strings.split(out, '\n')) do
+    if #(strings.trim_space(ref)) > 0 then
+      local parts = strings.split(ref, ' ')
+      local name = parts[2]
+
+      if strings.has_prefix(name, 'refs/remotes/origin/') then
+        name = name:gsub('^refs/remotes/origin/', '')
+      elseif strings.has_prefix(name, 'refs/tags/') then
+        name = name:gsub('^refs/tags/', '')
+      else
+        name = nil
+      end
+
+      if name then
+        table.insert(refs, name)
+      end
     end
   end
 
-  return tags
+  return refs
 end
