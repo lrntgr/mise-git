@@ -81,3 +81,28 @@ PLUGIN.url_sanitize = function(url)
 
   return url
 end
+
+--- Wrap a given string with single quotes
+--- @param val string Value to quote
+--- @return string quoted Quoted string
+PLUGIN.quote = function(val)
+  return "'" .. tostring(val) .. "'"
+end
+
+--- Remove/delete an existing directory
+--- @param dir string Directory path
+PLUGIN.dir_remove = function(dir)
+  local cmd = require('cmd')
+  local log = require('log')
+  local strings = require('strings')
+
+  dir = PLUGIN.quote(dir)
+  local is_win = (package.config:sub(1, 1) == '\\')
+  local rm_cmd = is_win and { 'rd', '/s/q', dir } or { 'rm', '-rd', dir }
+
+  log.info(string.format('Removing %s', dir))
+  local ok, _ = pcall(cmd.exec, strings.join(rm_cmd, ' '))
+  if not ok then
+    error(string.format('Failed to remove %s', dir))
+  end
+end

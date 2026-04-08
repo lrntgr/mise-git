@@ -17,7 +17,7 @@ function PLUGIN:BackendListVersions(ctx)
   -- Remove clone directory if `MISE_GIT_CLEAN_CLONE` is active
   local dir = file.join_path(PLUGIN.path_get('clone'), ctx.tool)
   if file.exists(dir) and (os.getenv('MISE_GIT_CLEAN_CLONE') == '1') then
-    H.dir_remove(dir)
+    PLUGIN.dir_remove(dir)
   end
 
   -- Ensure that repository is cloned in the work directory
@@ -37,28 +37,6 @@ end
 
 -- -------------------------------------------------------------------------- --
 
--- Wrap a given string with single quotes
-H.quote = function(val)
-  return "'" .. tostring(val) .. "'"
-end
-
--- Remove/delete a directory
-H.dir_remove = function(dir)
-  local cmd = require('cmd')
-  local log = require('log')
-  local strings = require('strings')
-
-  dir = H.quote(dir)
-  local is_win = (package.config:sub(1, 1) == '\\')
-  local rm_cmd = is_win and { 'rd', '/s/q', dir } or { 'rm', '-rd', dir }
-
-  log.info(string.format('Removing %s', dir))
-  local ok, _ = pcall(cmd.exec, strings.join(rm_cmd, ' '))
-  if not ok then
-    error(string.format('Failed to remove %s', dir))
-  end
-end
-
 -- Clone a repository
 H.clone = function(dir, url, tool)
   local cmd = require('cmd')
@@ -70,10 +48,10 @@ H.clone = function(dir, url, tool)
     'git',
     'clone',
     url,
-    H.quote(dir),
+    PLUGIN.quote(dir),
   }
-  log.info(string.format('Cloning url=%s...', H.quote(url)))
-  log.info(string.format('   |__ dir=%s', H.quote(dir)))
+  log.info(string.format('Cloning url=%s...', PLUGIN.quote(url)))
+  log.info(string.format('   |__ dir=%s', PLUGIN.quote(dir)))
   local ok, out = pcall(cmd.exec, strings.join(git_cmd, ' '))
   if not ok then
     error(string.format('Failed to clone %s: %s', tool, tostring(out)))
@@ -89,7 +67,7 @@ H.check = function(dir, url, tool)
   local git_cmd = {
     'git',
     '-C',
-    H.quote(dir),
+    PLUGIN.quote(dir),
     'config',
     '--get',
     'remote.origin.url',
@@ -99,7 +77,7 @@ H.check = function(dir, url, tool)
     error(
       string.format(
         'Failed to get origin remote of %s: %s',
-        H.quote(tool),
+        PLUGIN.quote(tool),
         tostring(out)
       )
     )
@@ -109,9 +87,9 @@ H.check = function(dir, url, tool)
     error(
       string.format(
         'Incorrect origin remote of %s: %s vs %s',
-        H.quote(tool),
-        H.quote(out),
-        H.quote(url)
+        PLUGIN.quote(tool),
+        PLUGIN.quote(out),
+        PLUGIN.quote(url)
       )
     )
   end
@@ -127,19 +105,19 @@ H.fetch = function(dir, tool)
   local git_cmd = {
     'git',
     '-C',
-    H.quote(dir),
+    PLUGIN.quote(dir),
     'fetch',
     '--prune',
     '--prune-tags',
     '--tags',
   }
-  log.info(string.format('Fetching refs of %s...', H.quote(tool)))
+  log.info(string.format('Fetching refs of %s...', PLUGIN.quote(tool)))
   local ok, out = pcall(cmd.exec, strings.join(git_cmd, ' '))
   if not ok then
     error(
       string.format(
         'Failed to fetch origin of %s: %s',
-        H.quote(tool),
+        PLUGIN.quote(tool),
         tostring(out)
       )
     )
@@ -155,7 +133,7 @@ H.list = function(dir, tool)
   local git_cmd = {
     'git',
     '-C',
-    H.quote(dir),
+    PLUGIN.quote(dir),
     'show-ref',
   }
   local ok, out = pcall(cmd.exec, strings.join(git_cmd, ' '))
@@ -163,7 +141,7 @@ H.list = function(dir, tool)
     error(
       string.format(
         'Failed to show refs of %s: %s',
-        H.quote(tool),
+        PLUGIN.quote(tool),
         tostring(out)
       )
     )
