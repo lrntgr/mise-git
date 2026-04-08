@@ -14,8 +14,13 @@ function PLUGIN:BackendListVersions(ctx)
     error('Tool name cannot be empty')
   end
 
-  -- Ensure that repository is cloned in the work directory
+  -- Remove clone directory if `MISE_GIT_CLEAN_CLONE` is active
   local dir = file.join_path(PLUGIN.path_get('clone'), ctx.tool)
+  if file.exists(dir) and (os.getenv('MISE_GIT_CLEAN_CLONE') == '1') then
+    H.dir_remove(dir)
+  end
+
+  -- Ensure that repository is cloned in the work directory
   local url = PLUGIN.url_sanitize(ctx.tool)
   if file.exists(dir) then
     H.check(dir, url, ctx.tool)
@@ -37,6 +42,23 @@ H.quote = function(val)
   return "'" .. tostring(val) .. "'"
 end
 
+-- Remove/delete a directory
+H.dir_remove = function(dir)
+  local cmd = require('cmd')
+  local log = require('log')
+  local strings = require('strings')
+
+  dir = H.quote(dir)
+  local is_win = (package.config:sub(1, 1) == '\\')
+  local rm_cmd = is_win and { 'rd', '/s/q', dir } or { 'rm', '-rd', dir }
+
+  log.info(string.format('Removing %s', dir))
+  local ok, _ = pcall(cmd.exec, strings.join(rm_cmd, ' '))
+  if not ok then
+    error(string.format('Failed to remove %s', dir))
+  end
+end
+
 -- Clone a repository
 H.clone = function(dir, url, tool)
   local cmd = require('cmd')
@@ -51,7 +73,8 @@ H.clone = function(dir, url, tool)
     url,
     H.quote(dir),
   }
-  log.info(string.format('Clone: url=%s, dir=%s', H.quote(url), H.quote(dir)))
+  log.info(string.format('Cloning url=%s...', H.quote(url)))
+  log.info(string.format('   |__ dir=%s', H.quote(dir)))
   local ok, out = pcall(cmd.exec, strings.join(git_cmd, ' '))
   if not ok then
     error(string.format('Failed to clone %s: %s', tool, tostring(out)))
