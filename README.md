@@ -7,8 +7,8 @@ install tools hosted as Git repositories.
 
 To install tools that:
 - are hosted on GitHub/GitLab/Forgejo, but with no release assets
-- are hosted on custom servers (_eg. Gitea, raw SSH server_)
-- aren't distibuting proper binaries, but require building from sources
+- are hosted on custom servers (_eg. Gitea, Bitbucket, a raw SSH server_)
+- do not distribute executables, but require building from sources
 
 ## Behavior
 
@@ -68,7 +68,7 @@ $ mise exec -- bonsai.sh -s 123 -g 35,20
      (_)                    (_)
 
 $ # Use 'postinstall' hook to build 'cmatrix' from sources
-$ cat >> mise.toml << EOF
+$ cat >> mise.toml << 'EOF'
 [tools."git:https|github.com/abishekvashok/cmatrix"]
 version = "v2.0"
 postinstall = '''
