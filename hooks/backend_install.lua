@@ -30,23 +30,22 @@ function PLUGIN:BackendInstall(ctx)
   end
 
   -- Check if clone directory exists
-  local clone_dir = file.join_path(PLUGIN.path_get('clone'), ctx.tool)
+  local clone_dir = file.join_path(PLUGIN.path_get(), ctx.tool)
   if not file.exists(clone_dir) then
     error(string.format('Missing clone directory: %s', PLUGIN.quote(clone_dir)))
   end
 
-  -- Ensure archive directory
-  local archive_dir = file.join_path(PLUGIN.path_get('archive'), ctx.tool)
-  if not file.exists(archive_dir) then
-    PLUGIN.dir_create(archive_dir)
-  end
-
   -- Archive repository at given version
-  local archive_file = file.join_path(archive_dir, ctx.version .. '.zip')
+  local archive_file = file.join_path(clone_dir, ctx.version .. '.zip')
   H.archive(clone_dir, ctx.version, archive_file, ctx.tool)
 
   -- Decompress archive to the install directory
   local err = archiver.decompress(archive_file, ctx.install_path)
+
+  -- Remove the archive file
+  os.remove(archive_file)
+
+  -- Check if decompressing succeeded
   if err ~= nil then
     error(string.format('Failed to decompress: %s', err))
   end
