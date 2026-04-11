@@ -51,7 +51,7 @@ H.clone = function(dir, url, tool)
     PLUGIN.quote(dir),
   }
   log.info(string.format('Cloning url=%s...', PLUGIN.quote(url)))
-  log.info(string.format('   |__ dir=%s', PLUGIN.quote(dir)))
+  log.debug(string.format('   |__ dir=%s', PLUGIN.quote(dir)))
   local ok, out = pcall(cmd.exec, strings.join(git_cmd, ' '))
   if not ok then
     error(string.format('Failed to clone %s: %s', tool, tostring(out)))

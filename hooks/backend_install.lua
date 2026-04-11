@@ -93,7 +93,7 @@ H.archive = function(dir, version, file, tool)
   }
 
   log.info(string.format('Archiving %s', PLUGIN.quote(tool .. '@' .. version)))
-  log.info(string.format('   |__ file=%s', PLUGIN.quote(file)))
+  log.debug(string.format('   |__ file=%s', PLUGIN.quote(file)))
   local ok, out = pcall(cmd.exec, strings.join(git_cmd, ' '))
   if not ok then
     error(string.format('Failed to archive %s: %s', dir, tostring(out)))
