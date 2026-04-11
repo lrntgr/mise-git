@@ -4,7 +4,7 @@
 
 PLUGIN = { -- luacheck: ignore
   name = 'git',
-  version = '0.1.0',
+  version = '0.2.0',
   description = 'A mise backend plugin for git hosted tools',
   author = 'lrntgr',
   homepage = 'https://github.com/lrntgr/mise-git',
@@ -13,9 +13,8 @@ PLUGIN = { -- luacheck: ignore
     'Requires `git` to be installed on your system.',
     '',
     'Consumes the `MISE_GIT_WORKDIR` environment variable to locate its own',
-    'working directory (defaults to `${MISE_DATA_DIR}/git`)',
-    'Clones repositories under `${MISE_GIT_WORKDIR}/.clone/`.',
-    'Store archives under `${MISE_GIT_WORKDIR}/.archive/`.',
+    'working directory (defaults to `${MISE_DATA_DIR}/git`).',
+    'Clones repositories under `${MISE_GIT_WORKDIR}/`.',
     '',
     "Lists a tool's versions from its repository branches and tags.",
     'Can actually install tool on any valid commit revision.',
@@ -30,9 +29,8 @@ PLUGIN = { -- luacheck: ignore
 -- -------------------------------------------------------------------------- --
 
 --- Get the path to 'mise-git' work directory
---- @param dir string|nil Targeted sub-directory
 --- @return string|nil path Absolute path of 'mise-git' work directory
-PLUGIN.path_get = function(dir)
+PLUGIN.path_get = function()
   local log = require('log')
   local file = require('file')
 
@@ -71,11 +69,7 @@ PLUGIN.path_get = function(dir)
   end
   log.debug(string.format("Base directory: '%s'", base_dir))
 
-  local dirs = {
-    clone = '.clone',
-    archive = '.archive',
-  }
-  return dirs[dir] and file.join_path(base_dir, dirs[dir]) or base_dir
+  return base_dir
 end
 
 --- Sanitize a given (git) URL

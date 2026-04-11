@@ -14,11 +14,10 @@ To install tools that:
 
 This backend plugin operates in a `${MISE_GIT_WORKDIR}` working directory.  
 It basically:
-- runs`git clone` to clone tool repositories in `${MISE_GIT_WORKDIR}/.clone/`
+- runs`git clone` to clone tool repositories in `${MISE_GIT_WORKDIR}/`
 - runs `git fetch` on cloned repositories, to retrieve tags and remote branches
 - runs `git show-ref` on cloned repositories, to list available versions
-- runs `git archive` on cloned repositories, to store content in `${MISE_GIT_WORKDIR}/.archive/`
-- decompress archives in `${MISE_GIT_WORKDIR}/.archive/` to the install path
+- runs `git archive` on targeted revision, and decompress archive file to the install path
 
 > [!WARNING]
 > As mise format uses `:` and `@` as special characters, `git` URL must be adapted:

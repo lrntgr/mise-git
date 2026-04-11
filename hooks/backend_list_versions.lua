@@ -15,7 +15,7 @@ function PLUGIN:BackendListVersions(ctx)
   end
 
   -- Remove clone directory if `MISE_GIT_CLEAN_CLONE` is active
-  local dir = file.join_path(PLUGIN.path_get('clone'), ctx.tool)
+  local dir = file.join_path(PLUGIN.path_get(), ctx.tool)
   if file.exists(dir) and (os.getenv('MISE_GIT_CLEAN_CLONE') == '1') then
     PLUGIN.dir_remove(dir)
   end
@@ -51,7 +51,7 @@ H.clone = function(dir, url, tool)
     PLUGIN.quote(dir),
   }
   log.info(string.format('Cloning url=%s...', PLUGIN.quote(url)))
-  log.info(string.format('   |__ dir=%s', PLUGIN.quote(dir)))
+  log.debug(string.format('   |__ dir=%s', PLUGIN.quote(dir)))
   local ok, out = pcall(cmd.exec, strings.join(git_cmd, ' '))
   if not ok then
     error(string.format('Failed to clone %s: %s', tool, tostring(out)))
